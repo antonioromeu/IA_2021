@@ -10,13 +10,13 @@ from search import Problem, Node, astar_search, breadth_first_tree_search, depth
 import sys
 import argparse
 
-class RSState:
+class RRState:
     statde_id = 0
 
     def __init__(self, board):
         self.board = board
-        self.id = RSState.state_id
-        RSState.state_id += 1
+        self.id = RRState.state_id
+        RRState.state_id += 1
     
     def __lt__(self, other):
         return self.id < other.id
