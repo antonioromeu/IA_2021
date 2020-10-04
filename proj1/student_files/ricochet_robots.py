@@ -45,6 +45,7 @@ def parse_instance(filename: str) -> Board:
     # TODO
     f = open(filename, 'r') 
     lines = f.readlines() 
+    counter = 0
     for line in lines: 
         print()
     pass
