@@ -9,6 +9,7 @@
 from search import Problem, Node, astar_search, breadth_first_tree_search, depth_first_tree_search, greedy_search
 import sys
 import argparse
+import numpy as np
 
 class RRState:
     statde_id = 0
@@ -22,36 +23,56 @@ class RRState:
         return self.id < other.id
 
 class Board:
-    """ Representacao interna de um tabuleiro de Ricochet Robots. """
-    board = []
-
-    def __init__(self, N):
+    def __init__(self, N: int):
         self.size = N
-        board = [[0 for i in range(N)]] * N
-
+        self.board = [[ 0 for i in range(self.size)] for j in range(self.size)]
+        self.internal_walls = [[ 0 for i in range(self.size)] for j in range(self.size)]
+ 
     def printBoard(self):
-        print(str(board))
+        print(self.board)
+        print(self.internal_walls)
+
+    def addRobot(self, color: str, x: int, y: int):
+        self.board[x - 1][y - 1] = color
+    
+    def addTarget(self, color: str, x: int, y: int):
+        self.board[x - 1][y - 1] = "t" + color
+
+    def addNumberWalls(self, n: int):
+        self.n_walls = n
+    
+    def addInternalWalls(self, x: int, y: int, pos: str):
+        self.internal_walls[x - 1][y - 1] = pos
 
     def robot_position(self, robot: str):
-        """ Devolve a posição atual do robô passado como argumento. """
-        # TODO
+        a = np.array(self.board)
+        result = np.where(a == robot)
+        coor = list(zip(result[0] + 1, result[1] + 1))
+        return coor[0]
         pass
+    
     # TODO: outros metodos da classe
 
-
 def parse_instance(filename: str) -> Board:
-    """ Lê o ficheiro cujo caminho é passado como argumento e retorna
-    uma instância da classe Board. """
     # TODO
-    f = open(filename, 'r') 
-    lines = f.readlines() 
-    counter = 0
-    for line in lines: 
-        print()
+    f = open(filename, 'r')
+    board = Board(int(f.readline()))
+    for i in range(4):
+        array = (f.readline()).split()
+        board.addRobot(array[0], int(array[1]), int(array[2]))
+    array = (f.readline()).split()
+    board.addTarget(array[0], int(array[1]), int(array[2]))
+    n_walls = f.readline()
+    board.addNumberWalls(int(n_walls))
+    for i in range(int(n_walls)):
+        array = (f.readline()).split()
+        board.addInternalWalls(int(array[0]), int(array[1]), array[2])
+    return board
     pass
 
-
 class RicochetRobots(Problem):
+    #input_seq[[ix1, ix2]] = input_seq[[ix2, ix1]]
+
     def __init__(self, board: Board):
         """ O construtor especifica o estado inicial. """
         # TODO: self.initial = ...
@@ -82,7 +103,6 @@ class RicochetRobots(Problem):
         """ Função heuristica utilizada para a procura A*. """
         # TODO
         pass
-
 
 if __name__ == "__main__":
     # TODO:
