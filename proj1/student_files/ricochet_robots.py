@@ -10,20 +10,16 @@ from search import Problem, Node, astar_search, breadth_first_tree_search, depth
 import sys
 import argparse
 
-
-class RRState:
-    state_id = 0
+class RSState:
+    statde_id = 0
 
     def __init__(self, board):
         self.board = board
-        self.id = RRState.state_id
-        RRState.state_id += 1
-
+        self.id = RSState.state_id
+        RSState.state_id += 1
+    
     def __lt__(self, other):
-    	"""Este método é utilizado em caso de empate na gestão da lista
-        de abertos nas procuras informadas."""
         return self.id < other.id
-
 
 class Board:
     """ Representacao interna de um tabuleiro de Ricochet Robots. """
