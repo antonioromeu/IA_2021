@@ -3,8 +3,8 @@
 # Além das funções e classes já definidas, podem acrescentar outras que considerem pertinentes.
 
 # Grupo 00:
-# 00000 Nome1
-# 00000 Nome2
+# 92509 Leonor Veloso
+# 92427 António Romeu Pinheiro
 
 from search import Problem, Node, astar_search, breadth_first_tree_search, depth_first_tree_search, greedy_search
 import sys
@@ -25,12 +25,11 @@ class RRState:
 class Board:
     def __init__(self, N: int):
         self.size = N
-        self.board = [[ 0 for i in range(self.size)] for j in range(self.size)]
-        self.internal_walls = [[ 0 for i in range(self.size)] for j in range(self.size)]
+        self.board = [[ '0' for i in range(self.size)] for j in range(self.size)]
+        self.internal_walls = [[ () for i in range(self.size)] for j in range(self.size)]
  
     def printBoard(self):
         print(self.board)
-        print(self.internal_walls)
 
     def addRobot(self, color: str, x: int, y: int):
         self.board[x - 1][y - 1] = color
@@ -41,8 +40,51 @@ class Board:
     def addNumberWalls(self, n: int):
         self.n_walls = n
     
-    def addInternalWalls(self, x: int, y: int, pos: str):
-        self.internal_walls[x - 1][y - 1] = pos
+    def addInternalWalls(self, l: int, c: int, pos: str):
+        if pos == 'r':
+            self.internal_walls[l - 1][c - 1] += (pos, )
+            self.internal_walls[l - 1][c] += ('l', )
+        elif pos == 'l':
+            self.internal_walls[l - 1][c - 1] += (pos, )
+            self.internal_walls[l - 1][c - 2] += ('r', )
+        elif pos == 'd':
+            self.internal_walls[l - 1][c - 1] += (pos, )
+            self.internal_walls[l][c - 1] += ('u', )
+        elif pos == 'u':
+            self.internal_walls[l - 1][c - 1] += (pos, )
+            self.internal_walls[l - 2][c - 1] += ('d', )
+
+    def existsWall(self, coor: tuple, dir: str):
+        return dir in self.internal_walls[coor[0]][coor[1]]
+
+    def swapPos(self, robot: tuple, dir: str):
+        new_pos = (-1, -1)
+        if self.existsWall(robot, dir):
+            return new_pos
+        if dir == 'u' and robot[0] != 0 and self.board[robot[0] - 1][robot[1]] == '0':
+            self.board[robot[0] - 1][robot[1]] = self.board[robot[0]][robot[1]]
+            self.board[robot[0]][robot[1]] = '0'
+            new_pos = (robot[0] - 1, robot[1])
+        elif dir == 'd' and robot[0] != 3 and self.board[robot[0] + 1][robot[1]] == '0':
+            self.board[robot[0] + 1][robot[1]] = self.board[robot[0]][robot[1]]
+            self.board[robot[0]][robot[1]] = '0'
+            new_pos = (robot[0] + 1, robot[1])
+        elif dir == 'r' and robot[1] != 3 and self.board[robot[0]][robot[1] + 1] == '0':
+            self.board[robot[0]][robot[1] + 1] = self.board[robot[0]][robot[1]]
+            self.board[robot[0]][robot[1]] = '0'
+            new_pos = (robot[0], robot[1] + 1)
+        elif dir == 'l' and robot[1] != 0 and self.board[robot[0]][robot[1] - 1] == '0':
+            self.board[robot[0]][robot[1] - 1] = self.board[robot[0]][robot[1]]
+            self.board[robot[0]][robot[1]] = '0'
+            new_pos = (robot[0], robot[1] - 1)
+        return new_pos
+
+    def slideAway(self, robot: tuple, dir: str):
+        aux = self.swapPos(robot, dir)
+        if aux == (-1, -1):
+            return
+        else:
+            self.slideAway(aux, dir)
 
     def robot_position(self, robot: str):
         a = np.array(self.board)
@@ -67,6 +109,9 @@ def parse_instance(filename: str) -> Board:
     for i in range(int(n_walls)):
         array = (f.readline()).split()
         board.addInternalWalls(int(array[0]), int(array[1]), array[2])
+    board.printBoard()
+    board.slideAway((3,0), 'u')
+    board.printBoard()
     return board
     pass
 
@@ -101,6 +146,11 @@ class RicochetRobots(Problem):
 
     def h(self, node: Node):
         """ Função heuristica utilizada para a procura A*. """
+        #manhattan distance:
+        #function heuristic(node) =
+            #dx = abs(node.x - goal.x)
+            #dy = abs(node.y - goal.y)
+            #return D * (dx + dy)
         # TODO
         pass
 
