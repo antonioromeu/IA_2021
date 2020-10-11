@@ -12,7 +12,7 @@ import argparse
 import numpy as np
 
 class RRState:
-    statde_id = 0
+    state_id = 0
 
     def __init__(self, board):
         self.board = board
@@ -55,25 +55,31 @@ class Board:
             self.internal_walls[l - 2][c - 1] += ('d', )
 
     def existsWall(self, coor: tuple, dir: str):
-        return dir in self.internal_walls[coor[0]][coor[1]]
+        print(dir in self.internal_walls[coor[0] - 1][coor[1] - 1])
+        return dir in self.internal_walls[coor[0] - 1][coor[1] - 1]
 
     def swapPos(self, robot: tuple, dir: str):
         new_pos = (-1, -1)
+        print("no swap pos " + dir)
+        print(robot)
         if self.existsWall(robot, dir):
             return new_pos
-        if dir == 'u' and robot[0] != 0 and self.board[robot[0] - 1][robot[1]] == '0':
+        if dir == 'u' and robot[0] - 1 != 0 and self.board[robot[0] - 2][robot[1] - 1] == '0':
             self.board[robot[0] - 1][robot[1]] = self.board[robot[0]][robot[1]]
             self.board[robot[0]][robot[1]] = '0'
             new_pos = (robot[0] - 1, robot[1])
-        elif dir == 'd' and robot[0] != 3 and self.board[robot[0] + 1][robot[1]] == '0':
-            self.board[robot[0] + 1][robot[1]] = self.board[robot[0]][robot[1]]
+        elif dir == 'd' and robot[0] - 1 != 3 and self.board[robot[0]][robot[1] - 1] == '0':
+            print("down")
+            self.board[robot[0]][robot[1] - 1] = self.board[robot[0]][robot[1]]
             self.board[robot[0]][robot[1]] = '0'
             new_pos = (robot[0] + 1, robot[1])
-        elif dir == 'r' and robot[1] != 3 and self.board[robot[0]][robot[1] + 1] == '0':
+        elif dir == 'r' and robot[1] - 1 != 3 and self.board[robot[0] - 1][robot[1]] == '0':
+            print("right")
             self.board[robot[0]][robot[1] + 1] = self.board[robot[0]][robot[1]]
             self.board[robot[0]][robot[1]] = '0'
             new_pos = (robot[0], robot[1] + 1)
-        elif dir == 'l' and robot[1] != 0 and self.board[robot[0]][robot[1] - 1] == '0':
+        elif dir == 'l' and robot[1] - 1 != 0 and self.board[robot[0] - 1][robot[1] - 2] == '0':
+            print("left")
             self.board[robot[0]][robot[1] - 1] = self.board[robot[0]][robot[1]]
             self.board[robot[0]][robot[1]] = '0'
             new_pos = (robot[0], robot[1] - 1)
@@ -109,24 +115,37 @@ def parse_instance(filename: str) -> Board:
     for i in range(int(n_walls)):
         array = (f.readline()).split()
         board.addInternalWalls(int(array[0]), int(array[1]), array[2])
-    board.printBoard()
-    board.slideAway((3,0), 'u')
-    board.printBoard()
+    #board.printBoard()
     return board
     pass
 
 class RicochetRobots(Problem):
-    #input_seq[[ix1, ix2]] = input_seq[[ix2, ix1]]
 
     def __init__(self, board: Board):
         """ O construtor especifica o estado inicial. """
-        # TODO: self.initial = ...
+        self.initial = board
         pass
 
     def actions(self, state: RRState):
         """ Retorna uma lista de ações que podem ser executadas a
         partir do estado passado como argumento. """
-        # TODO
+        board = state.board
+        self.actions = []
+        for robot in ['R', 'G', 'B', 'Y']:
+            pos = board.robot_position(robot)
+            for dir in ['u', 'd', 'l', 'r']:
+                if board.swapPos((pos[0] - 1, pos[1] - 1), dir) != (-1, -1):
+                    if dir == 'u':
+                        board.swapPos((pos[0] - 2, pos[1] - 1), 'd')
+                    elif dir == 'd':
+                        board.swapPos((pos[0], pos[1] - 1), 'u')
+                    elif dir == 'l':
+                        board.swapPos((pos[0] - 1, pos[1] - 2), 'r')
+                    elif dir == 'r':
+                        board.swapPos((pos[0] - 1, pos[1]), 'l')
+                    self.actions.append((robot, dir))
+        print(self.actions)
+        return self.actions
         pass
 
     def result(self, state: RRState, action):
@@ -134,7 +153,14 @@ class RicochetRobots(Problem):
         'state' passado como argumento. A ação retornada deve ser uma
         das presentes na lista obtida pela execução de
         self.actions(state). """
-        # TODO
+
+        robot_pos = state.board.robot_position(action[0])
+        print(robot_pos)
+        print(action[1])
+        state.board.printBoard()
+        state.board.slideAway(robot_pos, action[1])
+        state.board.printBoard()
+        return state
         pass
 
     def goal_test(self, state: RRState):
@@ -157,7 +183,9 @@ class RicochetRobots(Problem):
 if __name__ == "__main__":
     # TODO:
     # Ler o ficheiro de input de sys.argv[1],
-    parse_instance(sys.argv[1])
+    board = parse_instance(sys.argv[1])
+    problem = RicochetRobots(board)
+    problem.result(RRState(board), ('R', 'u'))
     # Usar uma técnica de procura para resolver a instância,
     # Retirar a solução a partir do nó resultante,
     # Imprimir para o standard output no formato indicado.
