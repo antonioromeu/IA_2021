@@ -55,38 +55,32 @@ class Board:
             self.internal_walls[l - 2][c - 1] += ('d', )
 
     def existsWall(self, coor: tuple, dir: str):
-        print(dir in self.internal_walls[coor[0] - 1][coor[1] - 1])
-        return dir in self.internal_walls[coor[0] - 1][coor[1] - 1]
+        return dir in self.internal_walls[coor[0]][coor[1]]
 
     def swapPos(self, robot: tuple, dir: str):
         new_pos = (-1, -1)
-        print("no swap pos " + dir)
-        print(robot)
         if self.existsWall(robot, dir):
             return new_pos
-        if dir == 'u' and robot[0] - 1 != 0 and self.board[robot[0] - 2][robot[1] - 1] == '0':
+        if dir == 'u' and robot[0] != 0 and self.board[robot[0] - 1][robot[1]] == '0':
             self.board[robot[0] - 1][robot[1]] = self.board[robot[0]][robot[1]]
             self.board[robot[0]][robot[1]] = '0'
             new_pos = (robot[0] - 1, robot[1])
-        elif dir == 'd' and robot[0] - 1 != 3 and self.board[robot[0]][robot[1] - 1] == '0':
-            print("down")
-            self.board[robot[0]][robot[1] - 1] = self.board[robot[0]][robot[1]]
+        elif dir == 'd' and robot[0] != 3 and self.board[robot[0] + 1][robot[1]] == '0':
+            self.board[robot[0] + 1][robot[1]] = self.board[robot[0]][robot[1]]
             self.board[robot[0]][robot[1]] = '0'
             new_pos = (robot[0] + 1, robot[1])
-        elif dir == 'r' and robot[1] - 1 != 3 and self.board[robot[0] - 1][robot[1]] == '0':
-            print("right")
+        elif dir == 'r' and robot[1] != 3 and self.board[robot[0]][robot[1] + 1] == '0':
             self.board[robot[0]][robot[1] + 1] = self.board[robot[0]][robot[1]]
             self.board[robot[0]][robot[1]] = '0'
             new_pos = (robot[0], robot[1] + 1)
-        elif dir == 'l' and robot[1] - 1 != 0 and self.board[robot[0] - 1][robot[1] - 2] == '0':
-            print("left")
+        elif dir == 'l' and robot[1] != 0 and self.board[robot[0]][robot[1] - 1] == '0':
             self.board[robot[0]][robot[1] - 1] = self.board[robot[0]][robot[1]]
             self.board[robot[0]][robot[1]] = '0'
             new_pos = (robot[0], robot[1] - 1)
         return new_pos
 
     def slideAway(self, robot: tuple, dir: str):
-        aux = self.swapPos(robot, dir)
+        aux = self.swapPos((robot[0], robot[1]), dir)
         if aux == (-1, -1):
             return
         else:
@@ -155,10 +149,8 @@ class RicochetRobots(Problem):
         self.actions(state). """
 
         robot_pos = state.board.robot_position(action[0])
-        print(robot_pos)
-        print(action[1])
         state.board.printBoard()
-        state.board.slideAway(robot_pos, action[1])
+        state.board.slideAway((robot_pos[0]-1, robot_pos[1]-1), action[1])
         state.board.printBoard()
         return state
         pass
