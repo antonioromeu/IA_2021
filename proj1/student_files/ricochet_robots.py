@@ -12,7 +12,7 @@ import argparse
 import numpy as np
 
 class RRState:
-    statde_id = 0
+    state_id = 0
 
     def __init__(self, board):
         self.board = board
@@ -80,7 +80,7 @@ class Board:
         return new_pos
 
     def slideAway(self, robot: tuple, dir: str):
-        aux = self.swapPos(robot, dir)
+        aux = self.swapPos((robot[0], robot[1]), dir)
         if aux == (-1, -1):
             return
         else:
@@ -109,24 +109,37 @@ def parse_instance(filename: str) -> Board:
     for i in range(int(n_walls)):
         array = (f.readline()).split()
         board.addInternalWalls(int(array[0]), int(array[1]), array[2])
-    board.printBoard()
-    board.slideAway((3,0), 'u')
-    board.printBoard()
+    #board.printBoard()
     return board
     pass
 
 class RicochetRobots(Problem):
-    #input_seq[[ix1, ix2]] = input_seq[[ix2, ix1]]
 
     def __init__(self, board: Board):
         """ O construtor especifica o estado inicial. """
-        # TODO: self.initial = ...
+        self.initial = board
         pass
 
     def actions(self, state: RRState):
         """ Retorna uma lista de ações que podem ser executadas a
         partir do estado passado como argumento. """
-        # TODO
+        board = state.board
+        self.actions = []
+        for robot in ['R', 'G', 'B', 'Y']:
+            pos = board.robot_position(robot)
+            for dir in ['u', 'd', 'l', 'r']:
+                if board.swapPos((pos[0] - 1, pos[1] - 1), dir) != (-1, -1):
+                    if dir == 'u':
+                        board.swapPos((pos[0] - 2, pos[1] - 1), 'd')
+                    elif dir == 'd':
+                        board.swapPos((pos[0], pos[1] - 1), 'u')
+                    elif dir == 'l':
+                        board.swapPos((pos[0] - 1, pos[1] - 2), 'r')
+                    elif dir == 'r':
+                        board.swapPos((pos[0] - 1, pos[1]), 'l')
+                    self.actions.append((robot, dir))
+        print(self.actions)
+        return self.actions
         pass
 
     def result(self, state: RRState, action):
@@ -134,7 +147,12 @@ class RicochetRobots(Problem):
         'state' passado como argumento. A ação retornada deve ser uma
         das presentes na lista obtida pela execução de
         self.actions(state). """
-        # TODO
+
+        robot_pos = state.board.robot_position(action[0])
+        state.board.printBoard()
+        state.board.slideAway((robot_pos[0]-1, robot_pos[1]-1), action[1])
+        state.board.printBoard()
+        return state
         pass
 
     def goal_test(self, state: RRState):
@@ -157,7 +175,9 @@ class RicochetRobots(Problem):
 if __name__ == "__main__":
     # TODO:
     # Ler o ficheiro de input de sys.argv[1],
-    parse_instance(sys.argv[1])
+    board = parse_instance(sys.argv[1])
+    problem = RicochetRobots(board)
+    problem.result(RRState(board), ('R', 'u'))
     # Usar uma técnica de procura para resolver a instância,
     # Retirar a solução a partir do nó resultante,
     # Imprimir para o standard output no formato indicado.
