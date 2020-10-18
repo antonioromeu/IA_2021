@@ -27,6 +27,9 @@ class Board:
         self.size = N
         self.board = [[ '0' for i in range(self.size)] for j in range(self.size)]
         self.internal_walls = [[ () for i in range(self.size)] for j in range(self.size)]
+        self.robotOnTarget = False
+        self.targetPos = (-1, -1)
+        self.targetColor = "BLACKPINK"
  
     def printBoard(self):
         print(self.board)
@@ -35,7 +38,8 @@ class Board:
         self.board[x - 1][y - 1] = color
     
     def addTarget(self, color: str, x: int, y: int):
-        self.board[x - 1][y - 1] = "t" + color
+        self.targetPos = (x - 1, y - 1)
+        self.targetColor = color
 
     def addNumberWalls(self, n: int):
         self.n_walls = n
@@ -61,6 +65,7 @@ class Board:
         new_pos = (-1, -1)
         if self.existsWall(robot, dir):
             return new_pos
+            
         if dir == 'u' and robot[0] != 0 and self.board[robot[0] - 1][robot[1]] == '0':
             self.board[robot[0] - 1][robot[1]] = self.board[robot[0]][robot[1]]
             self.board[robot[0]][robot[1]] = '0'
@@ -77,6 +82,7 @@ class Board:
             self.board[robot[0]][robot[1] - 1] = self.board[robot[0]][robot[1]]
             self.board[robot[0]][robot[1]] = '0'
             new_pos = (robot[0], robot[1] - 1)
+        self.robotOnTarget = (self.targetPos == new_pos and self.targetColor == self.board[new_pos[0]][new_pos[1]])
         return new_pos
 
     def slideAway(self, robot: tuple, dir: str):
@@ -123,7 +129,7 @@ class RicochetRobots(Problem):
     def actions(self, state: RRState):
         """ Retorna uma lista de ações que podem ser executadas a
         partir do estado passado como argumento. """
-        board = state.board
+        board = state
         self.actions = []
         for robot in ['R', 'G', 'B', 'Y']:
             pos = board.robot_position(robot)
@@ -147,29 +153,29 @@ class RicochetRobots(Problem):
         'state' passado como argumento. A ação retornada deve ser uma
         das presentes na lista obtida pela execução de
         self.actions(state). """
-
-        robot_pos = state.board.robot_position(action[0])
-        state.board.printBoard()
-        state.board.slideAway((robot_pos[0]-1, robot_pos[1]-1), action[1])
-        state.board.printBoard()
-        return state
+        new_state = RRState(state)
+        robot_pos = new_state.board.robot_position(action[0])
+        new_state.printBoard()
+        new_state.slideAway((robot_pos[0] - 1, robot_pos[1] - 1), action[1])
+        new_state.printBoard()
+        return new_state
         pass
 
     def goal_test(self, state: RRState):
         """ Retorna True se e só se o estado passado como argumento é
         um estado objetivo. Deve verificar se o alvo e o robô da
         mesma cor ocupam a mesma célula no tabuleiro. """
-        # TODO
+        return state.robotOnTarget
         pass
 
     def h(self, node: Node):
         """ Função heuristica utilizada para a procura A*. """
         #manhattan distance:
-        #function heuristic(node) =
-            #dx = abs(node.x - goal.x)
-            #dy = abs(node.y - goal.y)
-            #return D * (dx + dy)
-        # TODO
+        #print(node.state.robot_position("R"))
+        robot_pos = node.state.robot_position("R")
+        dx = abs(robot_pos[0] - self.initial.targetPos[0])
+        dy = abs(robot_pos[1] - self.initial.targetPos[1])
+        return dx + dy
         pass
 
 if __name__ == "__main__":
@@ -180,5 +186,6 @@ if __name__ == "__main__":
     problem.result(RRState(board), ('R', 'u'))
     # Usar uma técnica de procura para resolver a instância,
     # Retirar a solução a partir do nó resultante,
+    solution_node = astar_search(problem)
     # Imprimir para o standard output no formato indicado.
     pass
