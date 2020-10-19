@@ -97,12 +97,14 @@ class Board:
         result = np.where(a == robot)
         coor = list(zip(result[0] + 1, result[1] + 1))
         return coor[0]
-        pass
+
+    def getDistance(self, pos1: tuple, pos2: tuple):
+        return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1])
+
     
     # TODO: outros metodos da classe
 
 def parse_instance(filename: str) -> Board:
-    # TODO
     f = open(filename, 'r')
     board = Board(int(f.readline()))
     for i in range(4):
@@ -115,7 +117,6 @@ def parse_instance(filename: str) -> Board:
     for i in range(int(n_walls)):
         array = (f.readline()).split()
         board.addInternalWalls(int(array[0]), int(array[1]), array[2])
-    #board.printBoard()
     return board
     pass
 
@@ -123,69 +124,59 @@ class RicochetRobots(Problem):
 
     def __init__(self, board: Board):
         """ O construtor especifica o estado inicial. """
-        self.initial = board
+        self.initial = RRState(board)
         pass
 
     def actions(self, state: RRState):
         """ Retorna uma lista de ações que podem ser executadas a
         partir do estado passado como argumento. """
-        board = state
-        self.actions = []
+        actions = []
         for robot in ['R', 'G', 'B', 'Y']:
-            pos = board.robot_position(robot)
+            pos = state.board.robot_position(robot)
             for dir in ['u', 'd', 'l', 'r']:
-                if board.swapPos((pos[0] - 1, pos[1] - 1), dir) != (-1, -1):
+                if state.board.swapPos((pos[0] - 1, pos[1] - 1), dir) != (-1, -1):
                     if dir == 'u':
-                        board.swapPos((pos[0] - 2, pos[1] - 1), 'd')
+                        state.board.swapPos((pos[0] - 2, pos[1] - 1), 'd')
                     elif dir == 'd':
-                        board.swapPos((pos[0], pos[1] - 1), 'u')
+                        state.board.swapPos((pos[0], pos[1] - 1), 'u')
                     elif dir == 'l':
-                        board.swapPos((pos[0] - 1, pos[1] - 2), 'r')
+                        state.board.swapPos((pos[0] - 1, pos[1] - 2), 'r')
                     elif dir == 'r':
-                        board.swapPos((pos[0] - 1, pos[1]), 'l')
-                    self.actions.append((robot, dir))
-        print(self.actions)
-        return self.actions
-        pass
+                        state.board.swapPos((pos[0] - 1, pos[1]), 'l')
+                    actions.append((robot, dir))
+        return actions
 
     def result(self, state: RRState, action):
         """ Retorna o estado resultante de executar a 'action' sobre
         'state' passado como argumento. A ação retornada deve ser uma
         das presentes na lista obtida pela execução de
         self.actions(state). """
-        new_state = RRState(state)
+        new_state = RRState(state.board)
         robot_pos = new_state.board.robot_position(action[0])
-        new_state.printBoard()
-        new_state.slideAway((robot_pos[0] - 1, robot_pos[1] - 1), action[1])
-        new_state.printBoard()
+        new_state.board.slideAway((robot_pos[0] - 1, robot_pos[1] - 1), action[1])
         return new_state
-        pass
 
     def goal_test(self, state: RRState):
         """ Retorna True se e só se o estado passado como argumento é
         um estado objetivo. Deve verificar se o alvo e o robô da
         mesma cor ocupam a mesma célula no tabuleiro. """
-        return state.robotOnTarget
-        pass
+        return state.board.robotOnTarget
 
     def h(self, node: Node):
         """ Função heuristica utilizada para a procura A*. """
         #manhattan distance:
-        #print(node.state.robot_position("R"))
-        robot_pos = node.state.robot_position("R")
-        dx = abs(robot_pos[0] - self.initial.targetPos[0])
-        dy = abs(robot_pos[1] - self.initial.targetPos[1])
-        return dx + dy
-        pass
+        robot_pos = node.state.board.robot_position(self.initial.board.targetColor)
+        return self.initial.board.getDistance(robot_pos, self.initial.board.targetPos)
 
 if __name__ == "__main__":
     # TODO:
     # Ler o ficheiro de input de sys.argv[1],
-    board = parse_instance(sys.argv[1])
-    problem = RicochetRobots(board)
-    problem.result(RRState(board), ('R', 'u'))
     # Usar uma técnica de procura para resolver a instância,
     # Retirar a solução a partir do nó resultante,
-    solution_node = astar_search(problem)
     # Imprimir para o standard output no formato indicado.
+    board = parse_instance(sys.argv[1])
+    problem = RicochetRobots(board)
+    #while problem.goal_test(problem.initial) != True:
+    astar_search(problem)
+    problem.initial.board.printBoard()
     pass
