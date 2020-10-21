@@ -2,7 +2,7 @@
 # Devem alterar as classes e funções neste ficheiro de acordo com as instruções do enunciado.
 # Além das funções e classes já definidas, podem acrescentar outras que considerem pertinentes.
 
-# Grupo 00:
+# Grupo 59:
 # 92509 Leonor Veloso
 # 92427 António Romeu Pinheiro
 
@@ -21,6 +21,17 @@ class RRState:
     
     def __lt__(self, other):
         return self.id < other.id
+
+    def __eq__(self, state):
+        for i in range(self.board.size):
+            for j in range(self.board.size):
+                if self.board.board[i][j] != state.board.board[i][j]:
+                    return False
+        print("equals")
+        return True
+    
+    def __hash__(self):
+        return 1
 
 class Board:
     def __init__(self, N: int):
@@ -70,11 +81,11 @@ class Board:
             self.board[robot[0] - 1][robot[1]] = self.board[robot[0]][robot[1]]
             self.board[robot[0]][robot[1]] = '0'
             new_pos = (robot[0] - 1, robot[1])
-        elif dir == 'd' and robot[0] != 3 and self.board[robot[0] + 1][robot[1]] == '0':
+        elif dir == 'd' and robot[0] != self.size - 1 and self.board[robot[0] + 1][robot[1]] == '0':
             self.board[robot[0] + 1][robot[1]] = self.board[robot[0]][robot[1]]
             self.board[robot[0]][robot[1]] = '0'
             new_pos = (robot[0] + 1, robot[1])
-        elif dir == 'r' and robot[1] != 3 and self.board[robot[0]][robot[1] + 1] == '0':
+        elif dir == 'r' and robot[1] != self.size - 1 and self.board[robot[0]][robot[1] + 1] == '0':
             self.board[robot[0]][robot[1] + 1] = self.board[robot[0]][robot[1]]
             self.board[robot[0]][robot[1]] = '0'
             new_pos = (robot[0], robot[1] + 1)
@@ -82,12 +93,13 @@ class Board:
             self.board[robot[0]][robot[1] - 1] = self.board[robot[0]][robot[1]]
             self.board[robot[0]][robot[1]] = '0'
             new_pos = (robot[0], robot[1] - 1)
-        self.robotOnTarget = (self.targetPos == new_pos and self.targetColor == self.board[new_pos[0]][new_pos[1]])
         return new_pos
 
     def slideAway(self, robot: tuple, dir: str):
         aux = self.swapPos((robot[0], robot[1]), dir)
         if aux == (-1, -1):
+            self.robotOnTarget = (self.targetPos == robot and self.targetColor == self.board[robot[0]][robot[1]])
+            print(self.robotOnTarget)
             return
         else:
             self.slideAway(aux, dir)
@@ -102,8 +114,6 @@ class Board:
         return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1])
 
     
-    # TODO: outros metodos da classe
-
 def parse_instance(filename: str) -> Board:
     f = open(filename, 'r')
     board = Board(int(f.readline()))
@@ -118,7 +128,6 @@ def parse_instance(filename: str) -> Board:
         array = (f.readline()).split()
         board.addInternalWalls(int(array[0]), int(array[1]), array[2])
     return board
-    pass
 
 class RicochetRobots(Problem):
 
@@ -144,6 +153,7 @@ class RicochetRobots(Problem):
                     elif dir == 'r':
                         state.board.swapPos((pos[0] - 1, pos[1]), 'l')
                     actions.append((robot, dir))
+        print(actions)
         return actions
 
     def result(self, state: RRState, action):
@@ -154,12 +164,15 @@ class RicochetRobots(Problem):
         new_state = RRState(state.board)
         robot_pos = new_state.board.robot_position(action[0])
         new_state.board.slideAway((robot_pos[0] - 1, robot_pos[1] - 1), action[1])
+        new_state.board.printBoard()
         return new_state
 
     def goal_test(self, state: RRState):
         """ Retorna True se e só se o estado passado como argumento é
         um estado objetivo. Deve verificar se o alvo e o robô da
         mesma cor ocupam a mesma célula no tabuleiro. """
+        print("GOAL TEST")
+        print(state.board.robotOnTarget)
         return state.board.robotOnTarget
 
     def h(self, node: Node):
@@ -176,7 +189,6 @@ if __name__ == "__main__":
     # Imprimir para o standard output no formato indicado.
     board = parse_instance(sys.argv[1])
     problem = RicochetRobots(board)
-    #while problem.goal_test(problem.initial) != True:
-    astar_search(problem)
-    problem.initial.board.printBoard()
+    solution_node = astar_search(problem)
+    print(solution_node)
     pass
