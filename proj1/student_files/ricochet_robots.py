@@ -10,6 +10,8 @@ from search import Problem, Node, astar_search, breadth_first_tree_search, depth
 import sys
 import argparse
 import numpy as np
+import copy
+
 
 class RRState:
     state_id = 0
@@ -99,7 +101,6 @@ class Board:
         aux = self.swapPos((robot[0], robot[1]), dir)
         if aux == (-1, -1):
             self.robotOnTarget = (self.targetPos == robot and self.targetColor == self.board[robot[0]][robot[1]])
-            print(self.robotOnTarget)
             return
         else:
             self.slideAway(aux, dir)
@@ -161,10 +162,10 @@ class RicochetRobots(Problem):
         'state' passado como argumento. A ação retornada deve ser uma
         das presentes na lista obtida pela execução de
         self.actions(state). """
-        new_state = RRState(state.board)
+        #new_state = RRState(state.board)
+        new_state = copy.deepcopy(state)
         robot_pos = new_state.board.robot_position(action[0])
         new_state.board.slideAway((robot_pos[0] - 1, robot_pos[1] - 1), action[1])
-        new_state.board.printBoard()
         return new_state
 
     def goal_test(self, state: RRState):
@@ -190,5 +191,5 @@ if __name__ == "__main__":
     board = parse_instance(sys.argv[1])
     problem = RicochetRobots(board)
     solution_node = astar_search(problem)
-    print(solution_node)
+    print(solution_node.action)
     pass
