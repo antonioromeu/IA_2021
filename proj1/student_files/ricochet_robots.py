@@ -12,7 +12,6 @@ import argparse
 import numpy as np
 import copy
 
-
 class RRState:
     state_id = 0
 
@@ -29,7 +28,7 @@ class RRState:
             for j in range(self.board.size):
                 if self.board.board[i][j] != state.board.board[i][j]:
                     return False
-        print("equals")
+        #print("equals")
         return True
     
     def __hash__(self):
@@ -43,7 +42,18 @@ class Board:
         self.robotOnTarget = False
         self.targetPos = (-1, -1)
         self.targetColor = "BLACKPINK"
- 
+
+    def __deepcopy__(self, memo):
+        copy = type(self)(self.size)
+        memo[id(self)] = copy
+        copy.size = self.size
+        copy.robotOnTarget = self.robotOnTarget
+        copy.targetPos = self.targetPos
+        copy.targetColor = self.targetColor
+        copy.board = copy.deepcopy(self.board, memo)
+        copy.internal_walls = copy.deepcopy(self.internal_walls, memo)
+        return copy
+
     def printBoard(self):
         print(self.board)
 
@@ -154,16 +164,44 @@ class RicochetRobots(Problem):
                     elif dir == 'r':
                         state.board.swapPos((pos[0] - 1, pos[1]), 'l')
                     actions.append((robot, dir))
-        print(actions)
+        #print(actions)
         return actions
 
+    def cloneState(self, state: RRState):
+        thisdict = {}
+        # new_repr = []
+        # for x in range(state.board.size): 
+        #     temp = [] 
+        #     for elem in state.board.board[x]: 
+        #         temp.append(elem) 
+        #     new_repr.append(temp)
+
+        # new_internal_walls = []
+        # for x in range(state.board.size): 
+        #     temp = [] 
+        #     for elem in state.board.internal_walls[x]: 
+        #         temp.append(elem) 
+        #     new_repr.append(temp)
+
+        # new_board = Board(state.board.size)
+        # new_board.internal_walls = new_internal_walls
+        # new_board.board = new_repr
+        # new_board.targetColor = state.board.targetColor
+        # new_board.targetPos = state.board.targetPos
+        # new_board.robotOnTarget = state.board.robotOnTarget
+        new_board = copy.deepcopy(state.board, thisdict)
+        new_state = RRState(new_board)
+        new_state.id = state.id
+        return new_state
+    
     def result(self, state: RRState, action):
         """ Retorna o estado resultante de executar a 'action' sobre
         'state' passado como argumento. A ação retornada deve ser uma
         das presentes na lista obtida pela execução de
         self.actions(state). """
-        #new_state = RRState(state.board)
-        new_state = copy.deepcopy(state)
+        new_state = self.cloneState(state)
+        #new_state.id = state.id
+        #new_state = copy.deepcopy(state)
         robot_pos = new_state.board.robot_position(action[0])
         new_state.board.slideAway((robot_pos[0] - 1, robot_pos[1] - 1), action[1])
         return new_state
@@ -172,8 +210,8 @@ class RicochetRobots(Problem):
         """ Retorna True se e só se o estado passado como argumento é
         um estado objetivo. Deve verificar se o alvo e o robô da
         mesma cor ocupam a mesma célula no tabuleiro. """
-        print("GOAL TEST")
-        print(state.board.robotOnTarget)
+        #print("GOAL TEST")
+        #print(state.board.robotOnTarget)
         return state.board.robotOnTarget
 
     def h(self, node: Node):
@@ -181,6 +219,12 @@ class RicochetRobots(Problem):
         #manhattan distance:
         robot_pos = node.state.board.robot_position(self.initial.board.targetColor)
         return self.initial.board.getDistance(robot_pos, self.initial.board.targetPos)
+
+    def output(self, node: Node):
+        actions = node.solution()
+        print(len(actions))
+        for action in actions:
+            print(action[0] + " " + action[1])
 
 if __name__ == "__main__":
     # TODO:
@@ -191,5 +235,5 @@ if __name__ == "__main__":
     board = parse_instance(sys.argv[1])
     problem = RicochetRobots(board)
     solution_node = astar_search(problem)
-    print(solution_node.action)
+    problem.output(solution_node)
     pass
