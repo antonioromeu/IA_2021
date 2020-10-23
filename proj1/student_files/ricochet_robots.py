@@ -11,6 +11,7 @@ import sys
 import argparse
 import numpy as np
 import copy
+import time
 
 class RRState:
     state_id = 0
@@ -28,11 +29,10 @@ class RRState:
             for j in range(self.board.size):
                 if self.board.board[i][j] != state.board.board[i][j]:
                     return False
-        #print("equals")
         return True
     
     def __hash__(self):
-        return 1
+        return self.id % 7
 
 class Board:
     def __init__(self, N: int):
@@ -43,16 +43,7 @@ class Board:
         self.targetPos = (-1, -1)
         self.targetColor = "BLACKPINK"
 
-    def __deepcopy__(self, memo):
-        copy = type(self)(self.size)
-        memo[id(self)] = copy
-        copy.size = self.size
-        copy.robotOnTarget = self.robotOnTarget
-        copy.targetPos = self.targetPos
-        copy.targetColor = self.targetColor
-        copy.board = copy.deepcopy(self.board, memo)
-        copy.internal_walls = copy.deepcopy(self.internal_walls, memo)
-        return copy
+        self.robotStart = (-1, -1)
 
     def printBoard(self):
         print(self.board)
@@ -63,6 +54,7 @@ class Board:
     def addTarget(self, color: str, x: int, y: int):
         self.targetPos = (x - 1, y - 1)
         self.targetColor = color
+        self.robotStart = self.robot_position(self.targetColor)
 
     def addNumberWalls(self, n: int):
         self.n_walls = n
@@ -122,8 +114,14 @@ class Board:
         return coor[0]
 
     def getDistance(self, pos1: tuple, pos2: tuple):
-        return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1])
-
+        dx1 = abs(pos1[0] - pos2[0])
+        dy1 = abs(pos1[1] - pos2[1])
+        #dx2 = self.robotStart[0] - pos2[0]
+        #dy2 = self.robotStart[1] - pos2[1]
+        #man_distance = dx1 + dy1
+        cross = abs(dx1 - dy1)
+        #man_distance += cross
+        return dx1 + dy1 + cross
     
 def parse_instance(filename: str) -> Board:
     f = open(filename, 'r')
@@ -167,29 +165,24 @@ class RicochetRobots(Problem):
         #print(actions)
         return actions
 
+    def copyMatrix(self, inputList):
+        res = []
+        for x in range(len(inputList)):
+            temp = []
+            for elem in inputList[x]:
+                temp.append(elem)
+            res.append(temp)
+        return res
+
     def cloneState(self, state: RRState):
-        thisdict = {}
-        # new_repr = []
-        # for x in range(state.board.size): 
-        #     temp = [] 
-        #     for elem in state.board.board[x]: 
-        #         temp.append(elem) 
-        #     new_repr.append(temp)
-
-        # new_internal_walls = []
-        # for x in range(state.board.size): 
-        #     temp = [] 
-        #     for elem in state.board.internal_walls[x]: 
-        #         temp.append(elem) 
-        #     new_repr.append(temp)
-
-        # new_board = Board(state.board.size)
-        # new_board.internal_walls = new_internal_walls
-        # new_board.board = new_repr
-        # new_board.targetColor = state.board.targetColor
-        # new_board.targetPos = state.board.targetPos
-        # new_board.robotOnTarget = state.board.robotOnTarget
-        new_board = copy.deepcopy(state.board, thisdict)
+        new_repr = self.copyMatrix(state.board.board)
+        new_internal_walls = self.copyMatrix(state.board.internal_walls)
+        new_board = Board(state.board.size)
+        new_board.board = new_repr
+        new_board.internal_walls = new_internal_walls
+        new_board.robotOnTarget = state.board.robotOnTarget
+        new_board.targetColor = state.board.targetColor
+        new_board.targetPos = state.board.targetPos
         new_state = RRState(new_board)
         new_state.id = state.id
         return new_state
@@ -220,6 +213,8 @@ class RicochetRobots(Problem):
         robot_pos = node.state.board.robot_position(self.initial.board.targetColor)
         return self.initial.board.getDistance(robot_pos, self.initial.board.targetPos)
 
+
+
     def output(self, node: Node):
         actions = node.solution()
         print(len(actions))
@@ -233,7 +228,9 @@ if __name__ == "__main__":
     # Retirar a solução a partir do nó resultante,
     # Imprimir para o standard output no formato indicado.
     board = parse_instance(sys.argv[1])
+    #start = time.time()
     problem = RicochetRobots(board)
     solution_node = astar_search(problem)
+    #end = time.time()
+    #print(end - start)
     problem.output(solution_node)
-    pass
