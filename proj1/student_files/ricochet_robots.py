@@ -42,8 +42,7 @@ class Board:
         self.robotOnTarget = False
         self.targetPos = (-1, -1)
         self.targetColor = "BLACKPINK"
-
-        self.robotStart = (-1, -1)
+        self.visited = {"R" : [], "G" : [], "B" : [], "Y" : []}
 
     def printBoard(self):
         print(self.board)
@@ -54,7 +53,6 @@ class Board:
     def addTarget(self, color: str, x: int, y: int):
         self.targetPos = (x - 1, y - 1)
         self.targetColor = color
-        self.robotStart = self.robot_position(self.targetColor)
 
     def addNumberWalls(self, n: int):
         self.n_walls = n
@@ -103,9 +101,10 @@ class Board:
         aux = self.swapPos((robot[0], robot[1]), dir)
         if aux == (-1, -1):
             self.robotOnTarget = (self.targetPos == robot and self.targetColor == self.board[robot[0]][robot[1]])
+            if robot not in self.visited[self.board[robot[0]][robot[1]]]:
+                self.visited[self.board[robot[0]][robot[1]]].append(robot)
             return
-        else:
-            self.slideAway(aux, dir)
+        self.slideAway(aux, dir)
 
     def robot_position(self, robot: str):
         a = np.array(self.board)
@@ -116,8 +115,6 @@ class Board:
     def getDistance(self, pos1: tuple, pos2: tuple):
         dx1 = abs(pos1[0] - pos2[0])
         dy1 = abs(pos1[1] - pos2[1])
-        #dx2 = self.robotStart[0] - pos2[0]
-        #dy2 = self.robotStart[1] - pos2[1]
         #man_distance = dx1 + dy1
         cross = abs(dx1 - dy1)
         #man_distance += cross
@@ -213,13 +210,12 @@ class RicochetRobots(Problem):
         robot_pos = node.state.board.robot_position(self.initial.board.targetColor)
         return self.initial.board.getDistance(robot_pos, self.initial.board.targetPos)
 
-
-
     def output(self, node: Node):
         actions = node.solution()
         print(len(actions))
         for action in actions:
             print(action[0] + " " + action[1])
+        print(self.initial.board.visited)
 
 if __name__ == "__main__":
     # TODO:
