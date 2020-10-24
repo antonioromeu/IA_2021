@@ -2,7 +2,7 @@
 # Devem alterar as classes e funções neste ficheiro de acordo com as instruções do enunciado.
 # Além das funções e classes já definidas, podem acrescentar outras que considerem pertinentes.
 
-# Grupo 00:
+# Grupo 59:
 # 92509 Leonor Veloso
 # 92427 António Romeu Pinheiro
 
@@ -10,6 +10,8 @@ from search import Problem, Node, astar_search, breadth_first_tree_search, depth
 import sys
 import argparse
 import numpy as np
+import copy
+import time
 
 class RRState:
     state_id = 0
@@ -22,6 +24,16 @@ class RRState:
     def __lt__(self, other):
         return self.id < other.id
 
+    def __eq__(self, state):
+        for i in range(self.board.size):
+            for j in range(self.board.size):
+                if self.board.board[i][j] != state.board.board[i][j]:
+                    return False
+        return True
+    
+    def __hash__(self):
+        return self.id % 7
+
 class Board:
     def __init__(self, N: int):
         self.size = N
@@ -30,7 +42,9 @@ class Board:
         self.robotOnTarget = False
         self.targetPos = (-1, -1)
         self.targetColor = "BLACKPINK"
- 
+
+        self.robotStart = (-1, -1)
+
     def printBoard(self):
         print(self.board)
 
@@ -40,6 +54,7 @@ class Board:
     def addTarget(self, color: str, x: int, y: int):
         self.targetPos = (x - 1, y - 1)
         self.targetColor = color
+        self.robotStart = self.robot_position(self.targetColor)
 
     def addNumberWalls(self, n: int):
         self.n_walls = n
@@ -70,11 +85,11 @@ class Board:
             self.board[robot[0] - 1][robot[1]] = self.board[robot[0]][robot[1]]
             self.board[robot[0]][robot[1]] = '0'
             new_pos = (robot[0] - 1, robot[1])
-        elif dir == 'd' and robot[0] != 3 and self.board[robot[0] + 1][robot[1]] == '0':
+        elif dir == 'd' and robot[0] != self.size - 1 and self.board[robot[0] + 1][robot[1]] == '0':
             self.board[robot[0] + 1][robot[1]] = self.board[robot[0]][robot[1]]
             self.board[robot[0]][robot[1]] = '0'
             new_pos = (robot[0] + 1, robot[1])
-        elif dir == 'r' and robot[1] != 3 and self.board[robot[0]][robot[1] + 1] == '0':
+        elif dir == 'r' and robot[1] != self.size - 1 and self.board[robot[0]][robot[1] + 1] == '0':
             self.board[robot[0]][robot[1] + 1] = self.board[robot[0]][robot[1]]
             self.board[robot[0]][robot[1]] = '0'
             new_pos = (robot[0], robot[1] + 1)
@@ -82,12 +97,12 @@ class Board:
             self.board[robot[0]][robot[1] - 1] = self.board[robot[0]][robot[1]]
             self.board[robot[0]][robot[1]] = '0'
             new_pos = (robot[0], robot[1] - 1)
-        self.robotOnTarget = (self.targetPos == new_pos and self.targetColor == self.board[new_pos[0]][new_pos[1]])
         return new_pos
 
     def slideAway(self, robot: tuple, dir: str):
         aux = self.swapPos((robot[0], robot[1]), dir)
         if aux == (-1, -1):
+            self.robotOnTarget = (self.targetPos == robot and self.targetColor == self.board[robot[0]][robot[1]])
             return
         else:
             self.slideAway(aux, dir)
@@ -97,12 +112,18 @@ class Board:
         result = np.where(a == robot)
         coor = list(zip(result[0] + 1, result[1] + 1))
         return coor[0]
-        pass
-    
-    # TODO: outros metodos da classe
 
+    def getDistance(self, pos1: tuple, pos2: tuple):
+        dx1 = abs(pos1[0] - pos2[0])
+        dy1 = abs(pos1[1] - pos2[1])
+        #dx2 = self.robotStart[0] - pos2[0]
+        #dy2 = self.robotStart[1] - pos2[1]
+        #man_distance = dx1 + dy1
+        cross = abs(dx1 - dy1)
+        #man_distance += cross
+        return dx1 + dy1 + cross
+    
 def parse_instance(filename: str) -> Board:
-    # TODO
     f = open(filename, 'r')
     board = Board(int(f.readline()))
     for i in range(4):
@@ -115,77 +136,101 @@ def parse_instance(filename: str) -> Board:
     for i in range(int(n_walls)):
         array = (f.readline()).split()
         board.addInternalWalls(int(array[0]), int(array[1]), array[2])
-    #board.printBoard()
     return board
-    pass
 
 class RicochetRobots(Problem):
 
     def __init__(self, board: Board):
         """ O construtor especifica o estado inicial. """
-        self.initial = board
+        self.initial = RRState(board)
         pass
 
     def actions(self, state: RRState):
         """ Retorna uma lista de ações que podem ser executadas a
         partir do estado passado como argumento. """
-        board = state
-        self.actions = []
+        actions = []
         for robot in ['R', 'G', 'B', 'Y']:
-            pos = board.robot_position(robot)
+            pos = state.board.robot_position(robot)
             for dir in ['u', 'd', 'l', 'r']:
-                if board.swapPos((pos[0] - 1, pos[1] - 1), dir) != (-1, -1):
+                if state.board.swapPos((pos[0] - 1, pos[1] - 1), dir) != (-1, -1):
                     if dir == 'u':
-                        board.swapPos((pos[0] - 2, pos[1] - 1), 'd')
+                        state.board.swapPos((pos[0] - 2, pos[1] - 1), 'd')
                     elif dir == 'd':
-                        board.swapPos((pos[0], pos[1] - 1), 'u')
+                        state.board.swapPos((pos[0], pos[1] - 1), 'u')
                     elif dir == 'l':
-                        board.swapPos((pos[0] - 1, pos[1] - 2), 'r')
+                        state.board.swapPos((pos[0] - 1, pos[1] - 2), 'r')
                     elif dir == 'r':
-                        board.swapPos((pos[0] - 1, pos[1]), 'l')
-                    self.actions.append((robot, dir))
-        print(self.actions)
-        return self.actions
-        pass
+                        state.board.swapPos((pos[0] - 1, pos[1]), 'l')
+                    actions.append((robot, dir))
+        #print(actions)
+        return actions
 
+    def copyMatrix(self, inputList):
+        res = []
+        for x in range(len(inputList)):
+            temp = []
+            for elem in inputList[x]:
+                temp.append(elem)
+            res.append(temp)
+        return res
+
+    def cloneState(self, state: RRState):
+        new_repr = self.copyMatrix(state.board.board)
+        new_internal_walls = self.copyMatrix(state.board.internal_walls)
+        new_board = Board(state.board.size)
+        new_board.board = new_repr
+        new_board.internal_walls = new_internal_walls
+        new_board.robotOnTarget = state.board.robotOnTarget
+        new_board.targetColor = state.board.targetColor
+        new_board.targetPos = state.board.targetPos
+        new_state = RRState(new_board)
+        new_state.id = state.id
+        return new_state
+    
     def result(self, state: RRState, action):
         """ Retorna o estado resultante de executar a 'action' sobre
         'state' passado como argumento. A ação retornada deve ser uma
         das presentes na lista obtida pela execução de
         self.actions(state). """
-        new_state = RRState(state)
+        new_state = self.cloneState(state)
+        #new_state.id = state.id
+        #new_state = copy.deepcopy(state)
         robot_pos = new_state.board.robot_position(action[0])
-        new_state.printBoard()
-        new_state.slideAway((robot_pos[0] - 1, robot_pos[1] - 1), action[1])
-        new_state.printBoard()
+        new_state.board.slideAway((robot_pos[0] - 1, robot_pos[1] - 1), action[1])
         return new_state
-        pass
 
     def goal_test(self, state: RRState):
         """ Retorna True se e só se o estado passado como argumento é
         um estado objetivo. Deve verificar se o alvo e o robô da
         mesma cor ocupam a mesma célula no tabuleiro. """
-        return state.robotOnTarget
-        pass
+        #print("GOAL TEST")
+        #print(state.board.robotOnTarget)
+        return state.board.robotOnTarget
 
     def h(self, node: Node):
         """ Função heuristica utilizada para a procura A*. """
         #manhattan distance:
-        #print(node.state.robot_position("R"))
-        robot_pos = node.state.robot_position("R")
-        dx = abs(robot_pos[0] - self.initial.targetPos[0])
-        dy = abs(robot_pos[1] - self.initial.targetPos[1])
-        return dx + dy
-        pass
+        robot_pos = node.state.board.robot_position(self.initial.board.targetColor)
+        return self.initial.board.getDistance(robot_pos, self.initial.board.targetPos)
+
+
+
+    def output(self, node: Node):
+        actions = node.solution()
+        print(len(actions))
+        for action in actions:
+            print(action[0] + " " + action[1])
 
 if __name__ == "__main__":
     # TODO:
     # Ler o ficheiro de input de sys.argv[1],
-    board = parse_instance(sys.argv[1])
-    problem = RicochetRobots(board)
-    problem.result(RRState(board), ('R', 'u'))
     # Usar uma técnica de procura para resolver a instância,
     # Retirar a solução a partir do nó resultante,
-    solution_node = astar_search(problem)
     # Imprimir para o standard output no formato indicado.
-    pass
+    board = parse_instance(sys.argv[1])
+    #start = time.time()
+    problem = RicochetRobots(board)
+    solution_node = astar_search(problem)
+    #end = time.time()
+    #print(end - start)
+    problem.output(solution_node)
