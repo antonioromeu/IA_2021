@@ -10,6 +10,7 @@ from search import Problem, Node, astar_search, breadth_first_tree_search, depth
 import sys
 import argparse
 import numpy as np
+from math import sqrt
 import copy
 import time
 
@@ -32,7 +33,7 @@ class RRState:
         return True
     
     def __hash__(self):
-        return self.id % 7
+        return self.id % 5
 
 class Board:
     def __init__(self, N: int):
@@ -42,7 +43,9 @@ class Board:
         self.robotOnTarget = False
         self.targetPos = (-1, -1)
         self.targetColor = "BLACKPINK"
-        self.visited = {"R" : [], "G" : [], "B" : [], "Y" : []}
+        #self.visited = {"R" : [], "G" : [], "B" : [], "Y" : []}
+        self.visited = []
+        self.robotStartPos = (-1, -1)
 
     def printBoard(self):
         print(self.board)
@@ -53,6 +56,7 @@ class Board:
     def addTarget(self, color: str, x: int, y: int):
         self.targetPos = (x - 1, y - 1)
         self.targetColor = color
+        self.robotStartPos = self.robot_position(self.targetColor)
 
     def addNumberWalls(self, n: int):
         self.n_walls = n
@@ -101,8 +105,8 @@ class Board:
         aux = self.swapPos((robot[0], robot[1]), dir)
         if aux == (-1, -1):
             self.robotOnTarget = (self.targetPos == robot and self.targetColor == self.board[robot[0]][robot[1]])
-            if robot not in self.visited[self.board[robot[0]][robot[1]]]:
-                self.visited[self.board[robot[0]][robot[1]]].append(robot)
+            if robot not in self.visited:
+                self.visited.append(robot)
             return
         self.slideAway(aux, dir)
 
@@ -112,14 +116,30 @@ class Board:
         coor = list(zip(result[0] + 1, result[1] + 1))
         return coor[0]
 
+    def wallBetween(self, pos1: tuple, pos2: tuple):
+        res = -1
+        if pos1[0] == pos2[0]:
+            for i in range(min(pos1[1] - 1, pos2[1] - 1) + 1, abs(pos1[1] - pos2[1] - 1)):
+                if ('l' in self.internal_walls[pos1[0] - 1][i] or 'r' in self.internal_walls[pos1[0] - 1][i]):
+                    print("wall")
+                    res += 1
+        if pos1[1] == pos2[1]:
+            for i in range(min(pos1[0] - 1, pos2[0] - 1) + 1, abs(pos1[0] - pos2[0] - 1)):
+                if ('u' in self.internal_walls[i][pos1[1] - 1] or 'd' in self.internal_walls[i][pos1[1] - 1]):
+                    print("wall")
+                    res += 1
+        return res
+
     def getDistance(self, pos1: tuple, pos2: tuple):
-        dx1 = abs(pos1[0] - pos2[0])
-        dy1 = abs(pos1[1] - pos2[1])
-        #man_distance = dx1 + dy1
-        cross = abs(dx1 - dy1)
-        #man_distance += cross
-        return dx1 + dy1 + cross
-    
+        #res = 0
+        dx = abs(pos1[0] - pos2[0])
+        dy = abs(pos1[1] - pos2[1])
+        #res += dx + dy
+        cross = abs(dx - dy)
+        man_distance = dx + dy
+        #euc_dist = sqrt(dx * dx + dy * dy)
+        return man_distance + cross
+
 def parse_instance(filename: str) -> Board:
     f = open(filename, 'r')
     board = Board(int(f.readline()))
@@ -136,7 +156,6 @@ def parse_instance(filename: str) -> Board:
     return board
 
 class RicochetRobots(Problem):
-
     def __init__(self, board: Board):
         """ O construtor especifica o estado inicial. """
         self.initial = RRState(board)
@@ -159,7 +178,6 @@ class RicochetRobots(Problem):
                     elif dir == 'r':
                         state.board.swapPos((pos[0] - 1, pos[1]), 'l')
                     actions.append((robot, dir))
-        #print(actions)
         return actions
 
     def copyMatrix(self, inputList):
@@ -170,16 +188,25 @@ class RicochetRobots(Problem):
                 temp.append(elem)
             res.append(temp)
         return res
+    
+    def copyList(self, inputList):
+        res = []
+        for x in inputList:
+            res.append(x)
+        return res
 
     def cloneState(self, state: RRState):
         new_repr = self.copyMatrix(state.board.board)
         new_internal_walls = self.copyMatrix(state.board.internal_walls)
+        new_visited = self.copyList(state.board.visited)
         new_board = Board(state.board.size)
         new_board.board = new_repr
         new_board.internal_walls = new_internal_walls
+        new_board.visited = new_visited
         new_board.robotOnTarget = state.board.robotOnTarget
         new_board.targetColor = state.board.targetColor
         new_board.targetPos = state.board.targetPos
+        new_board.robotStartPos = state.board.robotStartPos
         new_state = RRState(new_board)
         new_state.id = state.id
         return new_state
@@ -202,20 +229,24 @@ class RicochetRobots(Problem):
         mesma cor ocupam a mesma célula no tabuleiro. """
         #print("GOAL TEST")
         #print(state.board.robotOnTarget)
+        #    print(state.board.visited)
         return state.board.robotOnTarget
 
     def h(self, node: Node):
         """ Função heuristica utilizada para a procura A*. """
         #manhattan distance:
-        robot_pos = node.state.board.robot_position(self.initial.board.targetColor)
-        return self.initial.board.getDistance(robot_pos, self.initial.board.targetPos)
+        robot_pos1 = node.state.board.robot_position('G')
+        robot_pos2 = node.state.board.robot_position('R')
+        robot_pos3 = node.state.board.robot_position('Y')
+        robot_pos4 = node.state.board.robot_position('B')
+        #return self.initial.board.getDistance(robot_pos, self.initial.board.targetPos)
+        return node.state.board.getDistance(robot_pos1, node.state.board.targetPos) + node.state.board.getDistance(robot_pos2, node.state.board.targetPos) + node.state.board.getDistance(robot_pos3, node.state.board.targetPos) + node.state.board.getDistance(robot_pos4, node.state.board.targetPos)
 
     def output(self, node: Node):
         actions = node.solution()
         print(len(actions))
         for action in actions:
             print(action[0] + " " + action[1])
-        print(self.initial.board.visited)
 
 if __name__ == "__main__":
     # TODO:
