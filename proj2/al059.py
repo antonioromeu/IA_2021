@@ -15,9 +15,12 @@ def entropy(p, n):
         return 0
     return true_value
 
-def calcGains(D, Y, initial_entropy, gains, p, n, decision_tree, fav_case):
-    local_ni0 = local_pi0 = local_ni1 = local_pi1 = 0
+def calcGains(D, Y, initial_entropy, gains, p, n, decision_tree, fav_case, calculated_attributes):
     for i in range(len(D[0])):
+        local_ni0 = local_pi0 = local_ni1 = local_pi1 = local_entropy_i0 = local_entropy_i1 = 0
+        if (i in calculated_attributes):
+            gains.append(0) 
+            continue
         instances = D[:, i]
         for j in range (len(instances)):
             if (instances[j] == 0 and Y[j] == 0):
@@ -31,6 +34,8 @@ def calcGains(D, Y, initial_entropy, gains, p, n, decision_tree, fav_case):
         local_entropy_i0 = entropy(local_pi0, local_ni0)
         local_entropy_i1 = entropy(local_pi1, local_ni1)
 
+        print(local_entropy_i0, local_entropy_i1)
+
         if (local_entropy_i0 > local_entropy_i1):
             fav_case.append(0)
         else:
@@ -38,11 +43,9 @@ def calcGains(D, Y, initial_entropy, gains, p, n, decision_tree, fav_case):
 
         leftovers = ((local_pi0 + local_ni0) / (p + n)) * local_entropy_i0 + ((local_pi1 + local_ni1) / (p + n)) * local_entropy_i1
         gain = initial_entropy - leftovers
-        print("leftover:")
-        print(leftovers)
         gains.append(gain)
-        print(gains)
-    return (gains.index(max(gains)), fav_case[i], local_entropy_i0, local_entropy_i1)
+        print("gains ", gains)
+    return (gains.index(max(gains)), fav_case[i], local_entropy_i0, local_entropy_i1, max(gains))
 
 def createdecisiontree(D, Y, noise = False):
     #init tree
@@ -56,16 +59,33 @@ def createdecisiontree(D, Y, noise = False):
     gains = []
     index_order = []
     fav_case = []
+    calculated_attributes = []
     global_dict = {}
-    while np.size(D):
-        max_gains_info = calcGains(D, Y, initial_entropy, gains, p, n, decision_tree, fav_case)
+    while 1:
+        # print("size: ", np.size(D[0]))
+        max_gains_info = calcGains(D, Y, initial_entropy, gains, p, n, decision_tree, fav_case, calculated_attributes)
         max_gain_index = max_gains_info[0]
+        print("max gain index: ", max_gain_index)
+        print("max gain info 1", max_gains_info[1])
+        if (max_gains_info[4] == 0):
+            num_lines = len(D)
+            print("primeiro if: ", num_lines)
+            for i in range(num_lines-1):
+                if (D[i][max_gain_index] != max_gains_info[1]):
+                    D = np.delete(D, i, axis = 0)
+                    print("oi", D)
+                    num_lines = len(D)
+            # break
+        calculated_attributes.append(max_gain_index)
         #saving in dict favorable case and entropy values for attribute with bigger gain
-        print(max_gain_index)
         global_dict[max_gain_index] = (max_gains_info[1], max_gains_info[2], max_gains_info[3])
         index_order.append(max_gain_index)
-        print(D)
-        D = np.delete(D, max_gain_index, axis = 0)
+        num_lines = len(D)
+        for i in range(num_lines-1):
+            print("segundo if: ", num_lines)
+            if (D[i][max_gain_index] != max_gains_info[1]):
+                D = np.delete(D, i, axis = 0)
+                num_lines = len(D)
         print(D)
         gains = []
     print(global_dict)
