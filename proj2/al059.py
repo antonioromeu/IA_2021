@@ -62,29 +62,40 @@ def createdecisiontree_aux(D, Y, p, n, initial_entropy):
         D = np.delete(D, index, axis = 1)
         for i in range(len(D)):
             if (D[i][index] != 0):
-                D1 = np.delete(D, i, axis = 0)
-                Y1 = np.delete(Y, i, axis = 0)
-        for i in range(len(D)):
-            if (D[i][index] != 1):
-                D2 = np.delete(D, i, axis = 0)
-                Y2 = np.delete(Y, i, axis = 0)
+                #D1 = np.delete(D, i, axis = 0)
+                #Y1 = np.delete(Y, i, axis = 0)
+                Y1 += [Y[i]]
+                D1 += [D[i]]
+        #for i in range(len(D)):
+            #if (D[i][index] != 1):
+            else:
+                D2 += [D[i]]
+                Y2 += [Y[i]]
+                #D2 = np.delete(D, i, axis = 0)
+                #Y2 = np.delete(Y, i, axis = 0)
         return [index, createdecisiontree_aux(D1, Y1, p, n, initial_entropy), createdecisiontree_aux(D2, Y2, p, n, initial_entropy)]
     
     else:
         index = gains.index(max(gains))
         D = np.delete(D, index, axis = 1)
+        D1 = []
+        Y1 = []
         if favcases[index] == 0:
             for i in range(len(D)):
                 if (D[i][index] != 0):
-                    D = np.delete(D, i, axis = 0)
-                    Y = np.delete(Y, i, axis = 0)
-            return [gains.index(max(gains)), createdecisiontree_aux(D, Y, p, n, initial_entropy), favcases[gains.index(max(gains))]]
+                    Y1 += [Y[i]]
+                    D1 += [D[i]]
+                    #D = np.delete(D, i, axis = 0)
+                    #Y = np.delete(Y, i, axis = 0)
+            return [gains.index(max(gains)), createdecisiontree_aux(D1, Y1, p, n, initial_entropy), favcases[gains.index(max(gains))]]
         else:
             for i in range(len(D)):
                 if (D[i][index] != 1):
-                    D = np.delete(D, i, axis = 0)
-                    Y = np.delete(Y, i, axis = 0)
-            return [gains.index(max(gains)), complementar(favcases[gains.index(max(gains))]), createdecisiontree_aux(D, Y, p, n, initial_entropy)]
+                    Y1 += [Y[i]]
+                    D1 += [D[i]]
+                    #D = np.delete(D, i, axis = 0)
+                    #Y = np.delete(Y, i, axis = 0)
+            return [gains.index(max(gains)), complementar(favcases[gains.index(max(gains))]), createdecisiontree_aux(D1, Y1, p, n, initial_entropy)]
 
 def createdecisiontree(D, Y, noise):
      decision_tree = []
