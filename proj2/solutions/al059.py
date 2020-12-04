@@ -42,7 +42,7 @@ def calcGain_aux(f_index, D, Y, p, n, initial_entropy):
             local_p1 += 1
     local_entropy_0 = entropy(local_p0, local_n0)
     local_entropy_1 = entropy(local_p1, local_n1)
-    if (local_entropy_0 > local_entropy_1):
+    if (local_p0 > local_p1):
         fav_case = 0
     else:
         fav_case = 1
@@ -56,7 +56,7 @@ def calcGain(D, Y, p, n, initial_entropy):
         gains_list.append(calcGain_aux(features_index, D, Y, p, n, initial_entropy))
     return gains_list
 
-def createdecisiontree_aux(D, Y, f):
+def createdecisiontree_aux(D, Y, f_index):
     resTuple = getPN(Y)
     p = resTuple[0]
     n = resTuple[1]
@@ -67,17 +67,18 @@ def createdecisiontree_aux(D, Y, f):
     D1 = []
     Y2 = []
     D2 = []
-    if max(gains) == 1:
+
+    if all(v == 0 for v in Y):
+        return [0, 0, 0]
+    
+    elif max(gains) == 1:
         index = gains.index(max(gains))
-        print("favcase 1if", favcases[index])
-        print("complementar 1if", complementar(favcases[index]))
         return [index, complementar(favcases[index]), favcases[index]]
     
-    elif len(set(gains)) == 1 and gains[0] == 0:
-        f_index = 0
-        if f_index <= f:
-            f_index = f + 1
-        
+    elif max(gains) == 0:
+        if f_index == len(D[0]) - 1:
+            return [f_index, complementar(favcases[f_index]), favcases[f_index]]
+        f_index += 1
         for i in range(len(D)):
             if D[i][f_index] == 0:
                 D1 += [D[i]]
@@ -85,7 +86,6 @@ def createdecisiontree_aux(D, Y, f):
             else:
                 D2 += [D[i]]
                 Y2 += [Y[i]]
-        print("favcase 2if", f_index)
         return [f_index, createdecisiontree_aux(D1, Y1, f_index), createdecisiontree_aux(D2, Y2, f_index)]
     
     else:
@@ -95,29 +95,27 @@ def createdecisiontree_aux(D, Y, f):
                 if D[i][index] == 0:
                     D1 += [D[i]]
                     Y1 += [Y[i]]
-            print("favcase else", favcases[index])
             return [index, createdecisiontree_aux(D1, Y1, index), favcases[index]]
         else:
             for i in range(len(D)):
                 if D[i][index] == 1:
                     D1 += [D[i]]
                     Y1 += [Y[i]]
-            print("complementar else", complementar(favcases[index]))
             return [index, complementar(favcases[index]), createdecisiontree_aux(D1, Y1, index)]
 
 def createdecisiontree(D, Y, noise):
     decision_tree = []
     p = np.count_nonzero(Y == 1)
     n = np.count_nonzero(Y == 0)
-    initial_entropy = entropy(p, n)
     D = D.tolist()
     Y = Y.tolist()
-    f = -1
-    print(createdecisiontree_aux(D, Y, f))
+    return createdecisiontree_aux(D, Y, -1)
 
 if __name__ == "__main__":
-    # D = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
-    # Y = np.array([0, 0, 0, 1])
-    D = np.array([[0, 0, 0], [0, 0, 1], [0, 1, 0], [0, 1, 1], [1, 0, 0], [1, 0, 1], [1, 1, 0], [1, 1, 1]])
-    Y = np.array([0, 1, 1, 0, 0, 1, 1, 0])
-    createdecisiontree(D, Y, False)
+    #D = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
+    #Y = np.array([0, 0, 0, 1])
+    #D = np.array([[0, 0, 0], [0, 0, 1], [0, 1, 0], [0, 1, 1], [1, 0, 0], [1, 0, 1], [1, 1, 0], [1, 1, 1]])
+    #Y = np.array([0, 1, 1, 0, 0, 1, 1, 0])
+    D = np.array([[0,0,0],[0,0,1],[0,1,0],[0,1,1],[1,0,0],[1,0,1],[1,1,0],[1,1,1]])
+    Y = np.array([1,0,0,0,0,0,0,1])
+    print(createdecisiontree(D, Y, False))
