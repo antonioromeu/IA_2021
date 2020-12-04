@@ -6,7 +6,6 @@ Student id #92427
 """
 
 import numpy as np
-import random
 
 def entropy(p, n):
     if p == 0 or n == 0:
@@ -20,6 +19,15 @@ def complementar(f):
     if f == 0:
         return 1
     return 0
+
+def getPN(Y):
+    p = n = 0
+    for value in Y:
+        if (value == 0):
+            p += 1
+        else:
+            n += 1
+    return (p, n)
 
 def calcGain_aux(f_index, D, Y, p, n, initial_entropy):
     local_n0 = local_p0 = local_n1 = local_p1 = local_entropy_0 = local_entropy_1 = 0
@@ -45,18 +53,8 @@ def calcGain_aux(f_index, D, Y, p, n, initial_entropy):
 def calcGain(D, Y, p, n, initial_entropy):
     gains_list = []
     for features_index in range(len(D[0])):
-        print("feautres_index", features_index)
         gains_list.append(calcGain_aux(features_index, D, Y, p, n, initial_entropy))
     return gains_list
-
-def getPN(Y):
-    p = n = 0
-    for value in Y:
-        if (value == 0):
-            p += 1
-        else:
-            n += 1
-    return (p, n)
 
 def createdecisiontree_aux(D, Y, f):
     resTuple = getPN(Y)
@@ -69,58 +67,57 @@ def createdecisiontree_aux(D, Y, f):
     D1 = []
     Y2 = []
     D2 = []
-    print(D)
-    print(Y)
-    # print(max(gains))
-    #print(gains_and_favcases)
-    #print(gains)
     if max(gains) == 1:
-        return [gains.index(max(gains)), complementar(favcases[gains.index(max(gains))]), favcases[gains.index(max(gains))]]
+        index = gains.index(max(gains))
+        print("favcase 1if", favcases[index])
+        print("complementar 1if", complementar(favcases[index]))
+        return [index, complementar(favcases[index]), favcases[index]]
     
     elif len(set(gains)) == 1 and gains[0] == 0:
-        index = 0
-        if index == f:
-            index += 1
+        f_index = 0
+        if f_index <= f:
+            f_index = f + 1
+        
         for i in range(len(D)):
-            if (D[i][index] == 0):
+            if D[i][f_index] == 0:
                 D1 += [D[i]]
-                Y1.append(Y[i])
+                Y1 += [Y[i]]
             else:
                 D2 += [D[i]]
-                Y2.append(Y[i])
-        return [index, createdecisiontree_aux(D1, Y1, f), createdecisiontree_aux(D2, Y2, f)]
+                Y2 += [Y[i]]
+        print("favcase 2if", f_index)
+        return [f_index, createdecisiontree_aux(D1, Y1, f_index), createdecisiontree_aux(D2, Y2, f_index)]
     
     else:
         index = gains.index(max(gains))
         if favcases[index] == 0:
             for i in range(len(D)):
-                if (D[i][index] == 0):
+                if D[i][index] == 0:
                     D1 += [D[i]]
-                    Y1.append(Y[i])
-            return [index, createdecisiontree_aux(D1, Y1, f), favcases[index]]
+                    Y1 += [Y[i]]
+            print("favcase else", favcases[index])
+            return [index, createdecisiontree_aux(D1, Y1, index), favcases[index]]
         else:
             for i in range(len(D)):
-                if (D[i][index] == 1):
-                    Y1.append(Y[i])
+                if D[i][index] == 1:
                     D1 += [D[i]]
-            print("chose: ", index)
-            return [index, complementar(favcases[index]), createdecisiontree_aux(D1, Y1, f)]
+                    Y1 += [Y[i]]
+            print("complementar else", complementar(favcases[index]))
+            return [index, complementar(favcases[index]), createdecisiontree_aux(D1, Y1, index)]
 
 def createdecisiontree(D, Y, noise):
     decision_tree = []
     p = np.count_nonzero(Y == 1)
     n = np.count_nonzero(Y == 0)
     initial_entropy = entropy(p, n)
-    # Y = np.asarray(Y)
-    # D = np.asarray(D)
-    # Y = Y.tolist()
     D = D.tolist()
+    Y = Y.tolist()
     f = -1
     print(createdecisiontree_aux(D, Y, f))
 
 if __name__ == "__main__":
-    #D = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
-    #Y = [0, 0, 0, 1]
+    # D = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
+    # Y = np.array([0, 0, 0, 1])
     D = np.array([[0, 0, 0], [0, 0, 1], [0, 1, 0], [0, 1, 1], [1, 0, 0], [1, 0, 1], [1, 1, 0], [1, 1, 1]])
-    Y = [0, 1, 1, 0, 0, 1, 1, 0]
+    Y = np.array([0, 1, 1, 0, 0, 1, 1, 0])
     createdecisiontree(D, Y, False)
