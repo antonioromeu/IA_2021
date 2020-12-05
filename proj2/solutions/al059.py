@@ -29,6 +29,17 @@ def getPN(Y):
             n += 1
     return (p, n)
 
+def getMajority(D, Y):
+    c0 = c1 = 0
+    for i in range(len(D)):
+        for j in range(len(D[i])):
+            if D[i][j] == 0 and Y[i] == 1:
+                c0 += 1
+            elif D[i][j] == 1 and Y[i] == 1:
+                c1 += 1
+    return max(c0, c1)
+
+
 def calcGain_aux(f_index, D, Y, p, n, initial_entropy):
     local_n0 = local_p0 = local_n1 = local_p1 = local_entropy_0 = local_entropy_1 = 0
     for row in range(len(Y)):
@@ -56,7 +67,7 @@ def calcGain(D, Y, p, n, initial_entropy):
         gains_list.append(calcGain_aux(features_index, D, Y, p, n, initial_entropy))
     return gains_list
 
-def createdecisiontree_aux(D, Y, f_index):
+def createdecisiontree_aux(D, Y, f_index, noise):
     # print(D)
     # print(Y)
     resTuple = getPN(Y)
@@ -76,21 +87,15 @@ def createdecisiontree_aux(D, Y, f_index):
     nparray = np.array(D)
     col = nparray[:,f_index]
 
-    if (f_index == len(D[0])):
-        return max(set(Y), key = Y.count)
-
     if all(v == 0 for v in Y):
         return 0
     
     elif all(v == 1 for v in Y):
-        if (all(v == 0 for v in col) or all(v == 1 for v in col)):
-            return 1
-        else:
-            return [f_index + 1, 1, 1]
+        return 1
     
-    elif max(gains) == 0 or len(gains) != len(set(gains)):
+    elif (noise == False and (max(gains) == 0 or len(gains) != len(set(gains)))) or (noise == True and max(gains) == 0):
         if f_index == len(D[0]) - 1:
-            return [f_index, complementar(favcases[f_index]), favcases[f_index]]
+            return getMajority(D, Y)
         f_index += 1
         for i in range(len(D)):
             if D[i][f_index] == 0:
@@ -99,13 +104,17 @@ def createdecisiontree_aux(D, Y, f_index):
             else:
                 D2 += [D[i]]
                 Y2 += [Y[i]]
-        if (createdecisiontree_aux(D1, Y1, f_index) == createdecisiontree_aux(D2, Y2, f_index)):
-            return createdecisiontree_aux(D1, Y1, f_index)
-        return [f_index, createdecisiontree_aux(D1, Y1, f_index), createdecisiontree_aux(D2, Y2, f_index)]
+        if (D1 == [] or D2 == []):
+            return getMajority(D, Y)
+        if (createdecisiontree_aux(D1, Y1, f_index, noise) == createdecisiontree_aux(D2, Y2, f_index, noise)):
+            return createdecisiontree_aux(D1, Y1, f_index, noise)
+        return [f_index, createdecisiontree_aux(D1, Y1, f_index, noise), createdecisiontree_aux(D2, Y2, f_index, noise)]
         
     elif max(gains) == 1:
         index = gains.index(max(gains))
-        return [index, complementar(favcases[index]), favcases[index]]
+        if D[0][index] == 0:
+            return [index, Y[0], complementar(Y[0])]
+        return [index, complementar(Y[0]), Y[0]]
     
     else:
         index = gains.index(max(gains))
@@ -116,35 +125,48 @@ def createdecisiontree_aux(D, Y, f_index):
             else:
                 D2 += [D[i]]
                 Y2 += [Y[i]]
-        if favcases[index] == 0:
-            return [index, createdecisiontree_aux(D1, Y1, index), favcases[index]]
+        if (D1 == [] or D2 == []):
+            return getMajority(D, Y)
+        if D[0][index] == 1:
+            return [index, Y[0], createdecisiontree_aux(D2, Y2, index, noise)]
         else:
-            return [index, complementar(favcases[index]), createdecisiontree_aux(D2, Y2, index)]
+            return [index, createdecisiontree_aux(D1, Y1, index, noise), Y[0]]
 
 def createdecisiontree(D, Y, noise):
     decision_tree = []
     p = np.count_nonzero(Y == 1)
     n = np.count_nonzero(Y == 0)
+    D = D.astype(int)
     D = D.tolist()
+    Y = Y.astype(int)
     Y = Y.tolist()
+
+    if (noise == 0.1):
+        true_noise = True
+    else:
+        true_noise = False
+
+    print(noise == True)
+
     if (all(v == 0 for v in Y)):
         return [0, 0, 0]
     elif (all(v == 1 for v in Y)):
         return [0, 1, 1]
 
-    print(createdecisiontree_aux(D, Y, -1))
 
-    
-    return createdecisiontree_aux(D, Y, -1)
+    return createdecisiontree_aux(D, Y, -1, true_noise)
 
-#if __name__ == "__main__":
-#    #D = np.array([[False, False], [False, True], [True, False], [True, True]])
-#    #Y = np.array([False, False, False, True])
-#    #D = np.array([[0, 0, 0], [0, 0, 1], [0, 1, 0], [0, 1, 1], [1, 0, 0], [1, 0, 1], [1, 1, 0], [1, 1, 1]])
-#    #Y = np.array([0, 1, 1, 0, 0, 1, 1, 0])
-#    #D = np.array([[0,0],[0,1],[1,0],[1,1]])
-#    #Y = np.array([1, 1, 1, 0])
-#    D = np.array([[0,0,0],[0,0,1],[0,1,0],[0,1,1],[1,0,0],[1,0,1],[1,1,0],[1,1,1]])
-#    Y = np.array([1, 0, 0, 1, 0, 1, 0, 1])
-#    # Y = np.array([0, 1, 0, 1, 0, 1, 0, 1])
-#    print(createdecisiontree(D, Y, False))
+# if __name__ == "__main__":
+#     #D = np.array([[False, False], [False, True], [True, False], [True, True]])
+#     #Y = np.array([False, False, False, True])
+#     #D = np.array([[0, 0, 0], [0, 0, 1], [0, 1, 0], [0, 1, 1], [1, 0, 0], [1, 0, 1], [1, 1, 0], [1, 1, 1]])
+#     #Y = np.array([0, 1, 1, 0, 0, 1, 1, 0])
+#     #D = np.array([[0,0],[0,1],[1,0],[1,1]])
+#     #Y = np.array([1, 1, 1, 0])
+#     #D = np.array([[0,0,0],[0,0,1],[0,1,0],[0,1,1],[1,0,0],[1,0,1],[1,1,0],[1,1,1]])
+#     #Y = np.array([1, 0, 0, 1, 0, 1, 0, 1])
+#     # Y = np.array([0, 1, 0, 1, 0, 1, 0, 1])
+#     np.random.seed(13102020)
+#     D = np.random.rand(1000,10)>0.5
+#     Y = ((D[:,1] == 0) & (D[:,6] == 0)) | ((D[:,3] == 1) & (D[:,4] == 1))  
+#     print(createdecisiontree(D, Y, False))
