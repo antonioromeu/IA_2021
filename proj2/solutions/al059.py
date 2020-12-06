@@ -4,51 +4,49 @@ Grupo al059
 Student id #92509
 Student id #92427
 """
-
 import numpy as np
 
 def entropy(p, n):
     if p == 0 or n == 0:
         return 0
-    true_value = (-p / (n + p)) * np.log2(p / (n + p)) - (n / (n + p)) * np.log2(n / (n + p))
-    if true_value < 0:
-        return 0
-    return true_value
+    return (-p / (n + p)) * np.log2(p / (n + p)) - (n / (n + p)) * np.log2(n / (n + p))
 
 def complementar(f):
-    if f == 0:
+    return 1 - f
+
+def getMajority(Y):
+    c0 = Y.count(0)
+    c1 = Y.count(1)
+    if (c0 > c1):
+        return 0
+    elif (c1 > c0):
         return 1
-    return 0
+    return -1
 
-def getPN(Y):
-    p = n = 0
-    for value in Y:
-        if (value == 0):
-            p += 1
-        else:
-            n += 1
-    return (p, n)
-
-def getMajority(D, Y):
-    c0 = c1 = 0
+def cutTree(D, Y, f_index):
+    D1 = []
+    D2 = []
+    Y1 = []
+    Y2 = []
     for i in range(len(D)):
-        for j in range(len(D[i])):
-            if D[i][j] == 0 and Y[i] == 1:
-                c0 += 1
-            elif D[i][j] == 1 and Y[i] == 1:
-                c1 += 1
-    return max(c0, c1)
+        if D[i][f_index] == 0:
+            D1 += [D[i]]
+            Y1 += [Y[i]]
+        else:
+            D2 += [D[i]]
+            Y2 += [Y[i]]
+    return (D1, Y1, D2, Y2)
 
 def calcGain_aux(f_index, D, Y, p, n, initial_entropy):
-    local_n0 = local_p0 = local_n1 = local_p1 = local_entropy_0 = local_entropy_1 = 0
+    local_n0 = local_p0 = local_n1 = local_p1 = 0
     for row in range(len(Y)):
         if (D[row][f_index] == 0 and Y[row] == 0):
             local_n0 += 1
-        if (D[row][f_index] == 0 and Y[row] == 1):
+        elif (D[row][f_index] == 0 and Y[row] == 1):
             local_p0 += 1
-        if (D[row][f_index] == 1 and Y[row] == 0):
+        elif (D[row][f_index] == 1 and Y[row] == 0):
             local_n1 += 1
-        if (D[row][f_index] == 1 and Y[row] == 1):
+        else:
             local_p1 += 1
     local_entropy_0 = entropy(local_p0, local_n0)
     local_entropy_1 = entropy(local_p1, local_n1)
@@ -63,127 +61,107 @@ def calcGain(D, Y, p, n, initial_entropy):
     return gains_list
 
 def createdecisiontree_aux(D, Y, f_index, noise):
-    # print(Y)
-    resTuple = getPN(Y)
-    p = resTuple[0]
-    n = resTuple[1]
+    p = Y.count(1)
+    n = Y.count(0)
     gains_and_favcases = calcGain(D, Y, p, n, entropy(p, n))
     gains = list(list(zip(*gains_and_favcases))[0])
     li0 = list(list(zip(*gains_and_favcases))[1])
     li1 = list(list(zip(*gains_and_favcases))[2])
-    Y1 = []
-    D1 = []
-    Y2 = []
-    D2 = []
 
-    if (Y == [] or D == []):
-        return
-
+    #remaining examples are all negative
     if all(v == 0 for v in Y):
         return 0
+    
+    #remaining examples are all positive
     elif all(v == 1 for v in Y):
         return 1
     
-    elif (noise == False and (max(gains) == 0 or len(gains) != len(set(gains)))) or (noise == True and max(gains) == 0):
-        if f_index == len(D[0]) - 1:
-            print("fghjk")
-            return getMajority(D, Y)
-        if (max(gains) == 0):
+    #maximum gain is 0 or there are repeated gain values (uncertainty)
+    elif max(gains) == 0 or len(gains) != len(set(gains)):
+        if max(gains) == 0:
             f_index += 1
+            #no more attributes left (only happens if there's noise)
+            if f_index == len(D[0]) and noise == True:
+                #assuming 0 for majority vote unconclusive
+                return 0 if getMajority(Y) == -1 else getMajority(Y)
         else:
+            #choosing attribute w/ biggest gain
             f_index = gains.index(max(gains))
-        for i in range(len(D)):
-            if D[i][f_index] == 0:
-                D1 += [D[i]]
-                Y1 += [Y[i]]
-            else:
-                D2 += [D[i]]
-                Y2 += [Y[i]]
+        
+        t = cutTree(D, Y, f_index)
+        D1 = t[0]
+        Y1 = t[1]
+        D2 = t[2]
+        Y2 = t[3]
+        
+        #no examples left (solving with majority vote, assuming 1 for unconclusive)
+        if noise == True and (D1 == [] or D2 == []):
+            return 1 if getMajority(Y) == -1 else getMajority(Y)
 
-        if (D1 == [] or D2 == []):
-            return getMajority(D, Y)
         c1 = createdecisiontree_aux(D1, Y1, f_index, noise)
         c2 = createdecisiontree_aux(D2, Y2, f_index, noise)
-        if (c1 == c2):
-            return c1
-        return [f_index, c1, c2]
-        
+
+        #shortening tree if left and right are the same, else expand tree
+        return c1 if c1 == c2 else [f_index, c1, c2]
+
+    #stopping case when maximum gain is 1
     elif max(gains) == 1:
         f_index = gains.index(max(gains))
         if D[0][f_index] == 0:
             return [f_index, Y[0], complementar(Y[0])]
         return [f_index, complementar(Y[0]), Y[0]]
     
-    #arvore começa no fav case
+    # 0 < maximum gain < 1
     else:
         f_index = gains.index(max(gains))
-        for i in range(len(D)):
-            if D[i][f_index] == 0:
-                D1 += [D[i]]
-                Y1 += [Y[i]]
-            else:
-                D2 += [D[i]]
-                Y2 += [Y[i]]
-        
+        t = cutTree(D, Y, f_index)
+        D1 = t[0]
+        Y1 = t[1]
+        D2 = t[2]
+        Y2 = t[3]
+
         c1 = createdecisiontree_aux(D1, Y1, f_index, noise)
         c2 = createdecisiontree_aux(D2, Y2, f_index, noise)
 
+        #both of the attribute's values have entropy 0
         if (li0[f_index] == 0 and li1[f_index] == 0):
             if D[0][f_index] == 0:
                 return [f_index, Y[0], complementar(Y[0])]
             return [f_index, complementar(Y[0]), Y[0]]
 
+        #favorable case is 1
         if li0[f_index] == 0:
             for i in range(len(D)):
                 if D[i][f_index] == 0:
                     return [f_index, Y[i], c2]
-         
+        
+        #favorable case is 0
         elif li1[f_index] == 0:
             for i in range(len(D)):
                 if D[i][f_index] == 1:
                     return [f_index, c1, Y[i]]
         
-        else:
-            if c1[1] == c2[1] and c1[0] == c2[0]:
-                return [c1[0], c1[1], [f_index, c1[2], c2[2]]]
-            return [f_index, c1, c2]
+        #shortening tree if sons have the same head and left tree
+        if (c1[0] == c2[0] and c1[1] == c2[1]):
+            return [c1[0], c1[1], [f_index, c1[2], c2[2]]]
+        
+        #shortening tree if sons have the same head and right tree
+        if (c1[0] == c2[0] and c1[2] == c2[2]):
+            return [c1[0], [f_index, c1[1], c2[1]], c1[2]]
+        
+        #there is no favorable case
+        return [f_index, c1, c2]
 
 def createdecisiontree(D, Y, noise):
-    decision_tree = []
     p = np.count_nonzero(Y == 1)
     n = np.count_nonzero(Y == 0)
-    D = D.astype(int)
-    D = D.tolist()
-    Y = Y.astype(int)
-    Y = Y.tolist()
+    D = (D.astype(int)).tolist()
+    Y = (Y.astype(int)).tolist()
+    true_noise = True if noise != 0 else False
 
-    if (noise == 0.1):
-        true_noise = True
-    else:
-        true_noise = False
-
-
-    if (all(v == 0 for v in Y)):
+    if all(v == 0 for v in Y):
         return [0, 0, 0]
-    elif (all(v == 1 for v in Y)):
+    elif all(v == 1 for v in Y):
         return [0, 1, 1]
 
-    if (true_noise == True):
-        print(createdecisiontree_aux(D, Y, -1, true_noise))
-
     return createdecisiontree_aux(D, Y, -1, true_noise)
-
-# if __name__ == "__main__":
-#     #D = np.array([[False, False], [False, True], [True, False], [True, True]])
-#     #Y = np.array([False, False, False, True])
-#     #D = np.array([[0, 0, 0], [0, 0, 1], [0, 1, 0], [0, 1, 1], [1, 0, 0], [1, 0, 1], [1, 1, 0], [1, 1, 1]])
-#     #Y = np.array([0, 1, 1, 0, 0, 1, 1, 0])
-#     #D = np.array([[0,0],[0,1],[1,0],[1,1]])
-#     #Y = np.array([1, 1, 1, 0])
-#     #D = np.array([[0,0,0],[0,0,1],[0,1,0],[0,1,1],[1,0,0],[1,0,1],[1,1,0],[1,1,1]])
-#     #Y = np.array([1, 0, 0, 1, 0, 1, 0, 1])
-#     # Y = np.array([0, 1, 0, 1, 0, 1, 0, 1])
-#     np.random.seed(13102020)
-#     D = np.random.rand(1000,10)>0.5
-#     Y = ((D[:,1] == 0) & (D[:,6] == 0)) | ((D[:,3] == 1) & (D[:,4] == 1))  
-#     print(createdecisiontree(D, Y, False))
