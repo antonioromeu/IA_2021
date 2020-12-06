@@ -39,7 +39,6 @@ def getMajority(D, Y):
                 c1 += 1
     return max(c0, c1)
 
-
 def calcGain_aux(f_index, D, Y, p, n, initial_entropy):
     local_n0 = local_p0 = local_n1 = local_p1 = local_entropy_0 = local_entropy_1 = 0
     for row in range(len(Y)):
@@ -53,13 +52,9 @@ def calcGain_aux(f_index, D, Y, p, n, initial_entropy):
             local_p1 += 1
     local_entropy_0 = entropy(local_p0, local_n0)
     local_entropy_1 = entropy(local_p1, local_n1)
-    if (local_p0 > local_p1):
-        fav_case = 0
-    else:
-        fav_case = 1
     leftovers = ((local_p0 + local_n0) / (p + n)) * local_entropy_0 + ((local_p1 + local_n1) / (p + n)) * local_entropy_1
     gain = initial_entropy - leftovers
-    return [gain, fav_case]
+    return [gain, local_entropy_0, local_entropy_1]
 
 def calcGain(D, Y, p, n, initial_entropy):
     gains_list = []
@@ -68,35 +63,38 @@ def calcGain(D, Y, p, n, initial_entropy):
     return gains_list
 
 def createdecisiontree_aux(D, Y, f_index, noise):
-    # print(D)
     # print(Y)
     resTuple = getPN(Y)
     p = resTuple[0]
     n = resTuple[1]
     gains_and_favcases = calcGain(D, Y, p, n, entropy(p, n))
     gains = list(list(zip(*gains_and_favcases))[0])
-    favcases = list(list(zip(*gains_and_favcases))[1])
+    li0 = list(list(zip(*gains_and_favcases))[1])
+    li1 = list(list(zip(*gains_and_favcases))[2])
     Y1 = []
     D1 = []
     Y2 = []
     D2 = []
-    # print(gains)
-    # print(f_index)
-    #print(D[f_index])
 
-    nparray = np.array(D)
-    col = nparray[:,f_index]
+    if (Y == [] or D == []):
+        return
 
     if all(v == 0 for v in Y):
+        print("0000")
         return 0
     
     elif all(v == 1 for v in Y):
+        print("11111")
         return 1
     
     elif (noise == False and (max(gains) == 0 or len(gains) != len(set(gains)))) or (noise == True and max(gains) == 0):
         if f_index == len(D[0]) - 1:
+            print("fghjk")
             return getMajority(D, Y)
-        f_index += 1
+        if (max(gains) == 0):
+            f_index += 1
+        else:
+            f_index = gains.index(max(gains))
         for i in range(len(D)):
             if D[i][f_index] == 0:
                 D1 += [D[i]]
@@ -104,33 +102,54 @@ def createdecisiontree_aux(D, Y, f_index, noise):
             else:
                 D2 += [D[i]]
                 Y2 += [Y[i]]
+
         if (D1 == [] or D2 == []):
             return getMajority(D, Y)
-        if (createdecisiontree_aux(D1, Y1, f_index, noise) == createdecisiontree_aux(D2, Y2, f_index, noise)):
-            return createdecisiontree_aux(D1, Y1, f_index, noise)
-        return [f_index, createdecisiontree_aux(D1, Y1, f_index, noise), createdecisiontree_aux(D2, Y2, f_index, noise)]
+        c1 = createdecisiontree_aux(D1, Y1, f_index, noise)
+        c2 = createdecisiontree_aux(D2, Y2, f_index, noise)
+        if (c1 == c2):
+            return c1
+        return [f_index, c1, c2]
         
     elif max(gains) == 1:
-        index = gains.index(max(gains))
-        if D[0][index] == 0:
-            return [index, Y[0], complementar(Y[0])]
-        return [index, complementar(Y[0]), Y[0]]
+        f_index = gains.index(max(gains))
+        if D[0][f_index] == 0:
+            return [f_index, Y[0], complementar(Y[0])]
+        return [f_index, complementar(Y[0]), Y[0]]
     
+    #arvore começa no fav case
     else:
-        index = gains.index(max(gains))
+        f_index = gains.index(max(gains))
         for i in range(len(D)):
-            if D[i][index] == 0:
+            if D[i][f_index] == 0:
                 D1 += [D[i]]
                 Y1 += [Y[i]]
             else:
                 D2 += [D[i]]
                 Y2 += [Y[i]]
-        if (D1 == [] or D2 == []):
-            return getMajority(D, Y)
-        if D[0][index] == 1:
-            return [index, Y[0], createdecisiontree_aux(D2, Y2, index, noise)]
+        
+        c1 = createdecisiontree_aux(D1, Y1, f_index, noise)
+        c2 = createdecisiontree_aux(D2, Y2, f_index, noise)
+
+        if (li0[f_index] == 0 and li1[f_index] == 0):
+            if D[0][f_index] == 0:
+                return [f_index, Y[0], complementar(Y[0])]
+            return [f_index, complementar(Y[0]), Y[0]]
+
+        if li0[f_index] == 0:
+            for i in range(len(D)):
+                if D[i][f_index] == 0:
+                    return [f_index, Y[i], c2]
+         
+        elif li1[f_index] == 0:
+            for i in range(len(D)):
+                if D[i][f_index] == 1:
+                    return [f_index, c1, Y[i]]
+        
         else:
-            return [index, createdecisiontree_aux(D1, Y1, index, noise), Y[0]]
+            if c1[1] == c2[1] and c1[0] == c2[0]:
+                return [c1[0], c1[1], [f_index, c1[2], c2[2]]]
+            return [f_index, c1, c2]
 
 def createdecisiontree(D, Y, noise):
     decision_tree = []
@@ -146,13 +165,14 @@ def createdecisiontree(D, Y, noise):
     else:
         true_noise = False
 
-    print(noise == True)
 
     if (all(v == 0 for v in Y)):
         return [0, 0, 0]
     elif (all(v == 1 for v in Y)):
         return [0, 1, 1]
 
+    if (true_noise == True):
+        print(createdecisiontree_aux(D, Y, -1, true_noise))
 
     return createdecisiontree_aux(D, Y, -1, true_noise)
 
