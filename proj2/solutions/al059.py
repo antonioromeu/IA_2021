@@ -80,11 +80,8 @@ def createdecisiontree_aux(D, Y, f_index, noise):
         return
 
     if all(v == 0 for v in Y):
-        print("0000")
         return 0
-    
     elif all(v == 1 for v in Y):
-        print("11111")
         return 1
     
     elif (noise == False and (max(gains) == 0 or len(gains) != len(set(gains)))) or (noise == True and max(gains) == 0):
