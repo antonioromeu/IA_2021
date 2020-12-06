@@ -1,2 +1,5 @@
 *.pdf
 *.pyc
+*.aux
+*.log
+.DS_Store
