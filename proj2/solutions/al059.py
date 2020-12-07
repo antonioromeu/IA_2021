@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
 Grupo al059
-Student id #92509
-Student id #92427
+Leonor Veloso id #92509
+Antonio Romeu Pinheiro id #92427
 """
 import numpy as np
 
