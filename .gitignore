@@ -3,3 +3,6 @@
 *.aux
 *.log
 .DS_Store
+*.aux
+*.log
+*.tex
